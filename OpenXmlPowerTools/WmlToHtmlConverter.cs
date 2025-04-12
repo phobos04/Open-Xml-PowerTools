@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
+using SkiaSharp;
 
 // 200e lrm - LTR
 // 200f rlm - RTL
@@ -120,7 +121,7 @@ namespace OpenXmlPowerTools
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public class ImageInfo
     {
-        public Bitmap Bitmap;
+        public SKImage Bitmap;
         public XAttribute ImgStyleAttribute;
         public string ContentType;
         public XElement DrawingElement;
@@ -1258,7 +1259,7 @@ namespace OpenXmlPowerTools
             var lineRule = (string) spacing.Attribute(W.lineRule);
             if (lineRule == "auto")
             {
-                var line = (decimal) spacing.Attribute(W.line);
+                var line = (decimal?) spacing.Attribute(W.line);
                 if (line != 240m)
                 {
                     var pct = (line/240m)*100m;
@@ -1267,13 +1268,13 @@ namespace OpenXmlPowerTools
             }
             if (lineRule == "exact")
             {
-                var line = (decimal) spacing.Attribute(W.line);
+                var line = (decimal?) spacing.Attribute(W.line);
                 var points = line/20m;
                 style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
             }
             if (lineRule == "atLeast")
             {
-                var line = (decimal) spacing.Attribute(W.line);
+                var line = (decimal?) spacing.Attribute(W.line);
                 var points = line/20m;
                 if (points >= 14m)
                     style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
@@ -2248,9 +2249,9 @@ namespace OpenXmlPowerTools
                 if (_knownFamilies == null)
                 {
                     _knownFamilies = new HashSet<string>();
-                    var families = FontFamily.Families;
+                    var families = SKFontManager.Default.GetFontFamilies();
                     foreach (var fam in families)
-                        _knownFamilies.Add(fam.Name);
+                        _knownFamilies.Add(fam);
                 }
                 return _knownFamilies;
             }
@@ -2276,10 +2277,10 @@ namespace OpenXmlPowerTools
                 return 0;
 
             // in theory, all unknown fonts are found by the above test, but if not...
-            FontFamily ff;
+            SKTypeface ff;
             try
             {
-                ff = new FontFamily(fontName);
+                ff = SKTypeface.FromFamilyName(fontName);
             }
             catch (ArgumentException)
             {
@@ -2288,11 +2289,11 @@ namespace OpenXmlPowerTools
                 return 0;
             }
 
-            var fs = FontStyle.Regular;
+            var fs = SKFontStyle.Normal;
             if (GetBoolProp(rPr, W.b) || GetBoolProp(rPr, W.bCs))
-                fs |= FontStyle.Bold;
+                fs = SKFontStyle.Bold;
             if (GetBoolProp(rPr, W.i) || GetBoolProp(rPr, W.iCs))
-                fs |= FontStyle.Italic;
+                fs = fs == SKFontStyle.Bold ? SKFontStyle.BoldItalic : SKFontStyle.Italic;
 
             // Appended blank as a quick fix to accommodate &nbsp; that will get
             // appended to some layout-critical runs such as list item numbers.
@@ -2331,7 +2332,7 @@ namespace OpenXmlPowerTools
                 runText = sb.ToString();
             }
 
-            var w = MetricsGetter.GetTextWidth(ff, fs, sz, runText);
+            var w = MetricsGetter.GetTextWidth(ff, sz, runText);
 
             return (int)(w / 96m * 1440m / multiplier + tabLength * 1440m);
         }
@@ -3079,7 +3080,7 @@ namespace OpenXmlPowerTools
                 return null;
 
             using (var partStream = imagePart.GetStream())
-            using (var bitmap = new Bitmap(partStream))
+            using (var bitmap = SKImage.FromEncodedData(partStream))
             {
                 if (extentCx != null && extentCy != null)
                 {
@@ -3145,7 +3146,7 @@ namespace OpenXmlPowerTools
                 {
                     try
                     {
-                        using (var bitmap = new Bitmap(partStream))
+                        using (var bitmap = SKImage.FromEncodedData(partStream))
                         {
                             var imageInfo = new ImageInfo()
                             {

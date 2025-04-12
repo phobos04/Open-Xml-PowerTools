@@ -21,6 +21,7 @@ using System.Text;
 using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using OpenXmlPowerTools;
+using SkiaSharp;
 
 class WmlToHtmlConverterHelper
 {
@@ -86,25 +87,25 @@ class WmlToHtmlConverterHelper
                             localDirInfo.Create();
                         ++imageCounter;
                         string extension = imageInfo.ContentType.Split('/')[1].ToLower();
-                        ImageFormat imageFormat = null;
+                        SKEncodedImageFormat? imageFormat = null;
                         if (extension == "png")
-                            imageFormat = ImageFormat.Png;
+                            imageFormat = SKEncodedImageFormat.Png;
                         else if (extension == "gif")
-                            imageFormat = ImageFormat.Gif;
+                            imageFormat = SKEncodedImageFormat.Gif;
                         else if (extension == "bmp")
-                            imageFormat = ImageFormat.Bmp;
+                            imageFormat = SKEncodedImageFormat.Bmp;
                         else if (extension == "jpeg")
-                            imageFormat = ImageFormat.Jpeg;
+                            imageFormat = SKEncodedImageFormat.Jpeg;
                         else if (extension == "tiff")
                         {
                             // Convert tiff to gif.
                             extension = "gif";
-                            imageFormat = ImageFormat.Gif;
+                            imageFormat = SKEncodedImageFormat.Gif;
                         }
                         else if (extension == "x-wmf")
                         {
                             extension = "wmf";
-                            imageFormat = ImageFormat.Wmf;
+                            // imageFormat = ImageFormat.Wmf;
                         }
 
                         // If the image format isn't one that we expect, ignore it,
@@ -116,7 +117,11 @@ class WmlToHtmlConverterHelper
                             imageCounter.ToString() + "." + extension;
                         try
                         {
-                            imageInfo.Bitmap.Save(imageFileName, imageFormat);
+                            using (var data = imageInfo.Bitmap.Encode(imageFormat.Value, 100))
+                            using (var file = File.OpenWrite(imageFileName))
+                            {
+                                data.SaveTo(file);
+                            }
                         }
                         catch (System.Runtime.InteropServices.ExternalException)
                         {

@@ -99,7 +99,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -109,6 +108,7 @@ using OpenXmlPowerTools;
 using OpenXmlPowerTools.HtmlToWml;
 using OpenXmlPowerTools.HtmlToWml.CSS;
 using System.Text.RegularExpressions;
+using SkiaSharp;
 
 namespace OpenXmlPowerTools.HtmlToWml
 {
@@ -1159,10 +1159,10 @@ namespace OpenXmlPowerTools.HtmlToWml
                 return 0;
 
             // in theory, all unknown fonts are found by the above test, but if not...
-            FontFamily ff;
+            SKTypeface ff;
             try
             {
-                ff = new FontFamily(fontName);
+                ff = SKTypeface.FromFamilyName(fontName);
             }
             catch (ArgumentException)
             {
@@ -1171,11 +1171,14 @@ namespace OpenXmlPowerTools.HtmlToWml
                 return 0;
             }
 
-            var fs = FontStyle.Regular;
+            var fs = SKFontStyle.Normal;
             if (Util.GetBoolProp(rPr, W.b) == true || Util.GetBoolProp(rPr, W.bCs) == true)
-                fs |= FontStyle.Bold;
+                fs = SKFontStyle.Bold;
+            
             if (Util.GetBoolProp(rPr, W.i) == true || Util.GetBoolProp(rPr, W.iCs) == true)
-                fs |= FontStyle.Italic;
+            {
+                fs = fs == SKFontStyle.Bold ? SKFontStyle.BoldItalic : SKFontStyle.Italic;
+            }
 
             // Appended blank as a quick fix to accommodate &nbsp; that will get
             // appended to some layout-critical runs such as list item numbers.
@@ -1214,7 +1217,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 runText = sb.ToString();
             }
 
-            return MetricsGetter.GetTextWidth(ff, fs, sz, runText) / multiplier;
+            return MetricsGetter.GetTextWidth(ff, sz, runText) / multiplier;
         }
 
         // The algorithm for this method comes from the implementer notes in [MS-OI29500].pdf
@@ -1885,9 +1888,9 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (_knownFamilies == null)
                 {
                     _knownFamilies = new HashSet<string>();
-                    var families = FontFamily.Families;
+                    var families = SKFontManager.Default.GetFontFamilies();
                     foreach (var fam in families)
-                        _knownFamilies.Add(fam.Name);
+                        _knownFamilies.Add(fam);
                 }
                 return _knownFamilies;
             }
@@ -2279,7 +2282,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         {
             string srcAttribute = (string)element.Attribute(XhtmlNoNamespace.src);
             byte[] ba = null;
-            Bitmap bmp = null;
+            SKImage bmp;
 
             if (srcAttribute.StartsWith("data:"))
             {
@@ -2289,14 +2292,14 @@ namespace OpenXmlPowerTools.HtmlToWml
                 ba = Convert.FromBase64String(base64);
                 using (MemoryStream ms = new MemoryStream(ba))
                 {
-                    bmp = new Bitmap(ms);
+                    bmp = SKImage.FromEncodedData(ms);
                 }
             }
             else
             {
                 try
                 {
-                    bmp = new Bitmap(settings.BaseUriForImages + "/" + srcAttribute);
+                    bmp = SKImage.FromEncodedData(settings.BaseUriForImages + "/" + srcAttribute);
                 }
                 catch (ArgumentException)
                 {
@@ -2306,9 +2309,17 @@ namespace OpenXmlPowerTools.HtmlToWml
                 {
                     return null;
                 }
+                
+                if (bmp == null)
+                    return null;
+                
                 MemoryStream ms = new MemoryStream();
-                bmp.Save(ms, bmp.RawFormat);
-                ba = ms.ToArray();
+                
+                using (var data = bmp.Encode())
+                {
+                    data.SaveTo(ms);
+                    ba = ms.ToArray();
+                }
             }
 
             MainDocumentPart mdp = wDoc.MainDocumentPart;
@@ -2352,7 +2363,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return null;
         }
 
-        private static XElement GetImageAsInline(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, Bitmap bmp,
+        private static XElement GetImageAsInline(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, SKImage bmp,
             string rId, int pictureId, string pictureDescription)
         {
             XElement inline = new XElement(WP.inline, // 20.4.2.8
@@ -2369,7 +2380,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return inline;
         }
 
-        private static XElement GetImageAsAnchor(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, Bitmap bmp,
+        private static XElement GetImageAsAnchor(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, SKImage bmp,
             string rId, string floatValue, int pictureId, string pictureDescription)
         {
             Emu minDistFromEdge = (long)(0.125 * Emu.s_EmusPerInch);
@@ -2550,13 +2561,16 @@ namespace OpenXmlPowerTools.HtmlToWml
                 new XElement(W.noProof));
         }
 
-        private static SizeEmu GetImageSizeInEmus(XElement img, Bitmap bmp)
+        private static SizeEmu GetImageSizeInEmus(XElement img, SKImage bmp)
         {
-            double hres = bmp.HorizontalResolution;
-            double vres = bmp.VerticalResolution;
-            Size s = bmp.Size;
-            Emu cx = (long)((double)(s.Width / hres) * (double)Emu.s_EmusPerInch);
-            Emu cy = (long)((double)(s.Height / vres) * (double)Emu.s_EmusPerInch);
+            const float hres = 96f;
+            const float vres = 96f;
+            
+            var widthPixels = bmp.Width;
+            var heightPixels = bmp.Height;
+            
+            Emu cx = (long)((double)(widthPixels / hres) * (double)Emu.s_EmusPerInch);
+            Emu cy = (long)((double)(heightPixels / vres) * (double)Emu.s_EmusPerInch);
 
             CssExpression width = img.GetProp("width");
             CssExpression height = img.GetProp("height");
@@ -2583,7 +2597,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return new SizeEmu(cx, cy);
         }
 
-        private static XElement GetImageExtent(XElement img, Bitmap bmp)
+        private static XElement GetImageExtent(XElement img, SKImage bmp)
         {
             SizeEmu szEmu = GetImageSizeInEmus(img, bmp);
             return new XElement(WP.extent,
@@ -2616,7 +2630,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                     new XAttribute(NoNamespace.noChangeAspect, 1)));
         }
 
-        private static XElement GetGraphicForImage(XElement element, string rId, Bitmap bmp, int pictureId, string pictureDescription)
+        private static XElement GetGraphicForImage(XElement element, string rId, SKImage bmp, int pictureId, string pictureDescription)
         {
             SizeEmu szEmu = GetImageSizeInEmus(element, bmp);
             XElement graphic = new XElement(A.graphic,

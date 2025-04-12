@@ -22,6 +22,7 @@ using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
 using OpenXmlPowerTools;
 using System.Collections.Generic;
+using SkiaSharp;
 
 class WmlToHtmlConverterHelper
 {
@@ -84,25 +85,25 @@ class WmlToHtmlConverterHelper
                     {
                         ++imageCounter;
                         string extension = imageInfo.ContentType.Split('/')[1].ToLower();
-                        ImageFormat imageFormat = null;
+                        SKEncodedImageFormat? imageFormat = null;
                         if (extension == "png")
-                            imageFormat = ImageFormat.Png;
+                            imageFormat = SKEncodedImageFormat.Png;
                         else if (extension == "gif")
-                            imageFormat = ImageFormat.Gif;
+                            imageFormat = SKEncodedImageFormat.Gif;
                         else if (extension == "bmp")
-                            imageFormat = ImageFormat.Bmp;
+                            imageFormat = SKEncodedImageFormat.Bmp;
                         else if (extension == "jpeg")
-                            imageFormat = ImageFormat.Jpeg;
+                            imageFormat = SKEncodedImageFormat.Jpeg;
                         else if (extension == "tiff")
                         {
                             // Convert tiff to gif.
                             extension = "gif";
-                            imageFormat = ImageFormat.Gif;
+                            imageFormat = SKEncodedImageFormat.Gif;
                         }
                         else if (extension == "x-wmf")
                         {
                             extension = "wmf";
-                            imageFormat = ImageFormat.Wmf;
+                            // imageFormat = ImageFormat.Wmf;
                         }
 
                         // If the image format isn't one that we expect, ignore it,
@@ -114,8 +115,9 @@ class WmlToHtmlConverterHelper
                         try
                         {
                             using (MemoryStream ms = new MemoryStream())
+                            using (var data = imageInfo.Bitmap.Encode(imageFormat.Value, 100))
                             {
-                                imageInfo.Bitmap.Save(ms, imageFormat);
+                                data.SaveTo(ms);
                                 var ba = ms.ToArray();
                                 base64 = System.Convert.ToBase64String(ba);
                             }
@@ -125,9 +127,8 @@ class WmlToHtmlConverterHelper
                             return null;
                         }
 
-                        ImageFormat format = imageInfo.Bitmap.RawFormat;
-                        ImageCodecInfo codec = ImageCodecInfo.GetImageDecoders().First(c => c.FormatID == format.Guid);
-                        string mimeType = codec.MimeType;
+                        SKEncodedImageFormat format = SKCodec.Create(imageInfo.Bitmap.EncodedData).EncodedFormat;
+                        string mimeType = GetMimeType(format);
 
                         string imageSource = string.Format("data:{0};base64,{1}", mimeType, base64);
 
@@ -160,4 +161,19 @@ class WmlToHtmlConverterHelper
             }
         }
     }
+    
+    public static string GetMimeType(SKEncodedImageFormat format) => format switch
+    {
+        SKEncodedImageFormat.Bmp => "image/bmp",
+        SKEncodedImageFormat.Gif => "image/gif",
+        SKEncodedImageFormat.Ico => "image/x-icon",
+        SKEncodedImageFormat.Jpeg => "image/jpeg",
+        SKEncodedImageFormat.Png => "image/png",
+        SKEncodedImageFormat.Wbmp => "image/vnd.wap.wbmp",
+        SKEncodedImageFormat.Webp => "image/webp",
+        SKEncodedImageFormat.Heif => "image/heif",
+        SKEncodedImageFormat.Avif => "image/avif",
+        SKEncodedImageFormat.Dng => "image/x-adobe-dng",
+        _ => "application/octet-stream"
+    };
 }

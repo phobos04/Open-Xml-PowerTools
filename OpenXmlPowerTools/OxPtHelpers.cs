@@ -14,7 +14,7 @@ using DocumentFormat.OpenXml.Validation;
 using OpenXmlPowerTools;
 using System.Text;
 using DocumentFormat.OpenXml;
-using System.Drawing.Imaging;
+using SkiaSharp;
 
 namespace OpenXmlPowerTools
 {
@@ -374,29 +374,29 @@ AAsACwDBAgAAbCwAAAAA";
                                 localDirInfo.Create();
                             ++imageCounter;
                             string extension = imageInfo.ContentType.Split('/')[1].ToLower();
-                            ImageFormat imageFormat = null;
+                            SKEncodedImageFormat? imageFormat = null;
                             if (extension == "png")
                             {
                                 // Convert png to jpeg.
                                 extension = "gif";
-                                imageFormat = ImageFormat.Gif;
+                                imageFormat = SKEncodedImageFormat.Gif;
                             }
                             else if (extension == "gif")
-                                imageFormat = ImageFormat.Gif;
+                                imageFormat = SKEncodedImageFormat.Gif;
                             else if (extension == "bmp")
-                                imageFormat = ImageFormat.Bmp;
+                                imageFormat = SKEncodedImageFormat.Bmp;
                             else if (extension == "jpeg")
-                                imageFormat = ImageFormat.Jpeg;
+                                imageFormat = SKEncodedImageFormat.Jpeg;
                             else if (extension == "tiff")
                             {
                                 // Convert tiff to gif.
                                 extension = "gif";
-                                imageFormat = ImageFormat.Gif;
+                                imageFormat = SKEncodedImageFormat.Gif;
                             }
                             else if (extension == "x-wmf")
                             {
                                 extension = "wmf";
-                                imageFormat = ImageFormat.Wmf;
+                                // imageFormat = SKEncodedImageFormat.Wmf;
                             }
 
                             // If the image format isn't one that we expect, ignore it,
@@ -408,7 +408,11 @@ AAsACwDBAgAAbCwAAAAA";
                                 imageCounter.ToString() + "." + extension;
                             try
                             {
-                                imageInfo.Bitmap.Save(imageFileName, imageFormat);
+                                using (var data = imageInfo.Bitmap.Encode(imageFormat.Value, 100)) 
+                                using (var imageFile = File.Create(imageFileName))
+                                {
+                                    data.SaveTo(imageFile);
+                                }
                             }
                             catch (System.Runtime.InteropServices.ExternalException)
                             {
