@@ -1249,35 +1249,55 @@ namespace OpenXmlPowerTools
         {
             if (spacing == null) return;
 
-            var spacingBefore = (decimal?) spacing.Attribute(W.before);
-            if (spacingBefore != null && elementName != Xhtml.span)
+            var spacingBeforeAttribute = spacing.Attribute(W.before);
+            if (spacingBeforeAttribute != null && elementName != Xhtml.span)
+            {
+                var spacingBefore = (decimal?)spacingBeforeAttribute;
+                
                 style.AddIfMissing("margin-top",
                     spacingBefore > 0m
-                        ? string.Format(NumberFormatInfo.InvariantInfo, "{0}pt", spacingBefore/20.0m)
+                        ? string.Format(NumberFormatInfo.InvariantInfo, "{0}pt", spacingBefore / 20.0m)
                         : "0");
+            }
 
             var lineRule = (string) spacing.Attribute(W.lineRule);
             if (lineRule == "auto")
             {
-                var line = (decimal?) spacing.Attribute(W.line);
-                if (line != 240m)
+                var lineAttribute = spacing.Attribute(W.line);
+
+                if (lineAttribute != null)
                 {
-                    var pct = (line/240m)*100m;
-                    style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}%", pct));
+                    var line = (decimal)lineAttribute;
+                    if (line != 240m)
+                    {
+                        var pct = (line / 240m) * 100m;
+                        style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}%", pct));
+                    }
                 }
             }
             if (lineRule == "exact")
             {
-                var line = (decimal?) spacing.Attribute(W.line);
-                var points = line/20m;
-                style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
+                var lineAttribute =  spacing.Attribute(W.line);
+
+                if (lineAttribute != null)
+                {
+                    var line = (decimal)lineAttribute;
+                    var points = line / 20m;
+                    style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
+                }
             }
             if (lineRule == "atLeast")
             {
-                var line = (decimal?) spacing.Attribute(W.line);
-                var points = line/20m;
-                if (points >= 14m)
-                    style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
+                var lineAttribute =  spacing.Attribute(W.line);
+
+                if (lineAttribute != null)
+                {
+                    var line = (decimal)lineAttribute;
+                    
+                    var points = line / 20m;
+                    if (points >= 14m)
+                        style.Add("line-height", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}pt", points));
+                }
             }
 
             var spacingAfter = suppressTrailingWhiteSpace ? 0 : WordprocessingMLUtil.AttributeToTwips(spacing.Attribute(W.after));
