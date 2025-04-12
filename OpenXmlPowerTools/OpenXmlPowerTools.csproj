@@ -47,18 +47,7 @@
 		<PackageReference Include="DocumentFormat.OpenXml" Version="2.14.0" />
 		<PackageReference Include="SkiaSharp" Version="3.116.1" />
 	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net45'">
-		<Reference Include="System.IO.Compression" />
-		<Reference Include="System.Windows.Forms" />
-		<Reference Include="WindowsBase" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net46' ">
-		<Reference Include="System.IO.Compression" />
-		<Reference Include="System.Windows.Forms" />
-	</ItemGroup>
-
+	
 	<ItemGroup>
 		<PackageReference Update="StyleCop.Analyzers" Version="1.1.118" />
 	</ItemGroup>

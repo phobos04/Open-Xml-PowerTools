@@ -6,13 +6,14 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.x
+      - name: Build
+        run: dotnet build ./OpenXmlPowerTools -c Release
       - name: Pack
-        run: dotnet pack --configuration Release -o ./out
+        run: dotnet pack ./OpenXmlPowerTools -c Release -o ./out
       - name: Push to NuGet.org
         run: dotnet nuget push ./out/*.nupkg -k ${{secrets.NUGET_API_KEY}} -s https://api.nuget.org/v3/index.json
