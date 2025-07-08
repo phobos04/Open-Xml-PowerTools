@@ -4,10 +4,10 @@
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Authors>Microsoft, Eric White, Lionel Vallet, Mitchell Kutchuk</Authors>
 		<RepositoryUrl>https://github.com/royal-road/Open-Xml-PowerTools</RepositoryUrl>
-		<PackageId>RoyalRoad.OpenXmlPowerTools</PackageId>
+		<PackageId>phobos04.OpenXmlPowerTools</PackageId>
 		<PackageTags>OpenXmlPowerTools, NET, Standard, OpenXML, Power, Tools</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageProjectUrl>https://github.com/royal-road/Open-Xml-PowerTools</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/phobos04/Open-Xml-PowerTools</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Description>
 			Based on maintainer EricWhite's vNext fork, includes .NET 8.0, .NET 9.0 and .NET Standard 2.0 build target for use in cross-platform scenarios.
@@ -16,7 +16,7 @@
 
 			It supports scenarios such as:
 			•Splitting DOCX/PPTX files into multiple files.
-		•Combining multiple DOCX/PPTX files into a single file.
+			•Combining multiple DOCX/PPTX files into a single file.
 			•Populating content in template DOCX files with data from XML.
 			•High-fidelity conversion of DOCX to HTML.
 			•Searching and replacing content in DOCX/PPTX using regular expressions.
@@ -25,7 +25,7 @@
 			•Retrieving metrics from DOCX files, including the hierarchy of styles used, the languages used, and the fonts used.
 			•Writing XLSX files using far simpler code than directly writing the markup, including a streaming approach that enables writing XLSX files with millions of rows.
 		</Description>
-		<Version>4.7.0</Version>
+		<Version>4.8.0</Version>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
 		<TreatWarningsAsErrors>False</TreatWarningsAsErrors>
