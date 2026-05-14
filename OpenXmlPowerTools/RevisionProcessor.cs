@@ -1268,17 +1268,27 @@ namespace OpenXmlPowerTools
 
         public static void AcceptRevisions(WordprocessingDocument doc)
         {
-            AcceptRevisionsForPart(doc.MainDocumentPart);
-            foreach (var part in doc.MainDocumentPart.HeaderParts)
-                AcceptRevisionsForPart(part);
-            foreach (var part in doc.MainDocumentPart.FooterParts)
-                AcceptRevisionsForPart(part);
-            if (doc.MainDocumentPart.EndnotesPart != null)
-                AcceptRevisionsForPart(doc.MainDocumentPart.EndnotesPart);
-            if (doc.MainDocumentPart.FootnotesPart != null)
-                AcceptRevisionsForPart(doc.MainDocumentPart.FootnotesPart);
-            if (doc.MainDocumentPart.StyleDefinitionsPart != null)
-                AcceptRevisionsForStylesDefinitionPart(doc.MainDocumentPart.StyleDefinitionsPart);
+            var mainDocumentPart = doc.MainDocumentPart;
+            if (mainDocumentPart == null)
+                throw new InvalidOperationException("The WordprocessingDocument does not contain a MainDocumentPart.");
+
+            AcceptRevisionsForPart(mainDocumentPart);
+            foreach (var part in mainDocumentPart.HeaderParts)
+                AcceptRevisionsForOptionalPart(part);
+            foreach (var part in mainDocumentPart.FooterParts)
+                AcceptRevisionsForOptionalPart(part);
+            AcceptRevisionsForOptionalPart(mainDocumentPart.EndnotesPart);
+            AcceptRevisionsForOptionalPart(mainDocumentPart.FootnotesPart);
+            if (mainDocumentPart.StyleDefinitionsPart != null)
+                AcceptRevisionsForStylesDefinitionPart(mainDocumentPart.StyleDefinitionsPart);
+        }
+
+        private static void AcceptRevisionsForOptionalPart(OpenXmlPart part)
+        {
+            if (part == null)
+                return;
+
+            AcceptRevisionsForPart(part);
         }
 
         private static void AcceptRevisionsForStylesDefinitionPart(StyleDefinitionsPart stylesDefinitionsPart)

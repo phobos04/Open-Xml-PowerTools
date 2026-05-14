@@ -10,7 +10,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using OpenXmlPowerTools;
 using Xunit;
 
@@ -33,6 +35,36 @@ namespace OxPt
             WmlDocument afterAccepting = RevisionAccepter.AcceptRevisions(notAccepted);
             var processedDestDocx = new FileInfo(Path.Combine(TestUtil.TempDir.FullName, sourceDocx.Name.Replace(".docx", "-processed-by-RevisionAccepter.docx")));
             afterAccepting.SaveAs(processedDestDocx.FullName);
+        }
+
+        [Fact]
+        public void AcceptRevisionsHandlesAbsentOptionalParts()
+        {
+            using (var stream = new MemoryStream())
+            using (var doc = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+            {
+                var mainDocumentPart = doc.AddMainDocumentPart();
+                mainDocumentPart.Document = new Document(
+                    new Body(
+                        new Paragraph(
+                            new Run(
+                                new Text("Hello")))));
+                mainDocumentPart.Document.Save();
+
+                RevisionAccepter.AcceptRevisions(doc);
+            }
+        }
+
+        [Fact]
+        public void AcceptRevisionsRejectsDocumentWithoutMainDocumentPart()
+        {
+            using (var stream = new MemoryStream())
+            using (var doc = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+            {
+                var exception = Assert.Throws<InvalidOperationException>(() => RevisionAccepter.AcceptRevisions(doc));
+
+                Assert.Equal("The WordprocessingDocument does not contain a MainDocumentPart.", exception.Message);
+            }
         }
 
     }
